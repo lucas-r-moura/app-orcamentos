@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Orçamento">
+  <meta name="theme-color" content="#1f1952">
+  <title>Orçamentos</title>
+  <style>
+    :root {
+      --primary: #1f1952;
+      --primary-dark: #140f3a;
+      --primary-light: #eceaf6;
+      --bg: #f3f4f6;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --border: #e5e7eb;
+      --danger: #ef4444;
+      --radius: 14px;
+      --shadow: 0 1px 6px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: var(--primary);
+      color: #fff;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    }
+    .header h1 { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: #fff;
+      padding: 8px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ── Tab bar ── */
+    .tabbar {
+      display: flex;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 53px;
+      z-index: 80;
+    }
+    .tabbar button {
+      flex: 1;
+      padding: 13px 4px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .tabbar button.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* ── Screen containers ── */
+    .screen { display: none; padding-bottom: 90px; }
+    .screen.active { display: block; }
+    .container { max-width: 600px; margin: 0 auto; padding: 16px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+    .card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ── Form fields ── */
+    .field { margin-bottom: 12px; }
+    .field:last-child { margin-bottom: 0; }
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 5px;
+    }
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+      color: var(--text);
+      background: #fff;
+      transition: border-color .2s;
+      -webkit-appearance: none;
+      appearance: none;
+      font-family: inherit;
+    }
+    .field select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%236b7280' d='M5 7L0.5 2.5h9z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 34px;
+    }
+    .field input:focus,
+    .field select:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .field input[readonly] { background: #f9fafb; color: var(--muted); }
+    .field textarea { min-height: 76px; resize: vertical; line-height: 1.5; }
+    input[type="color"] { padding: 4px 6px; height: 48px; cursor: pointer; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .row3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 8px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 13px 18px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      min-height: 48px;
+      transition: opacity .15s, transform .1s;
+      font-family: inherit;
+    }
+    .btn:active { opacity: .85; transform: scale(0.98); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-outline { background: #fff; color: var(--primary); border: 2px solid var(--primary); }
+    .btn-ghost { background: none; color: var(--danger); border: none; padding: 8px; min-height: unset; font-size: 18px; }
+    .btn-block { width: 100%; }
+    .btn-sm { font-size: 13px; padding: 8px 14px; min-height: unset; border-radius: 8px; }
+
+    /* ── Add item buttons ── */
+    .add-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .add-bar button {
+      padding: 10px 4px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 2px solid;
+      background: none;
+      line-height: 1.3;
+      font-family: inherit;
+      transition: opacity .15s;
+    }
+    .add-bar button:active { opacity: .7; }
+    .add-labor   { color: #92400e; border-color: #fbbf24; background: #fffbeb !important; }
+    .add-material{ color: #065f46; border-color: #34d399; background: #f0fdf4 !important; }
+    .add-fixed   { color: #1e3a8a; border-color: #60a5fa; background: #eff6ff !important; }
+
+    /* ── Item rows ── */
+    .item-row {
+      background: #fafafa;
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .badge-labor    { background: #fef3c7; color: #92400e; }
+    .badge-material { background: #d1fae5; color: #065f46; }
+    .badge-fixed    { background: #dbeafe; color: #1e3a8a; }
+    .item-sub { font-size: 14px; font-weight: 700; color: var(--primary); }
+
+    /* ── Totals ── */
+    .total-card {
+      background: var(--primary);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      margin-bottom: 14px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
+      padding: 4px 0;
+    }
+    .total-row.big {
+      border-top: 1px solid rgba(255,255,255,.35);
+      margin-top: 10px;
+      padding-top: 12px;
+      font-size: 21px;
+      font-weight: 800;
+    }
+
+    /* ── Bottom action bar ── */
+    .action-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border-top: 1px solid var(--border);
+      padding: 10px 16px 14px;
+      display: flex;
+      gap: 10px;
+      z-index: 70;
+    }
+    .action-bar .btn { flex: 1; }
+
+    /* ── Logo upload ── */
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .logo-box {
+      width: 72px;
+      height: 72px;
+      border-radius: 12px;
+      border: 2px dashed var(--border);
+      background: #f9fafb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      flex-shrink: 0;
+      font-size: 30px;
+    }
+    .logo-box img { width: 100%; height: 100%; object-fit: contain; }
+
+    /* ── History cards ── */
+    .hist-card {
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+    }
+    .hist-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    .hist-num { font-weight: 700; font-size: 15px; }
+    .hist-total { font-weight: 700; color: var(--primary); font-size: 15px; }
+    .hist-info { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1f2937;
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      white-space: nowrap;
+      transition: opacity .25s;
+    }
+    .toast.show { opacity: 1; }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 28px 16px;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 10px; }
+
+    /* ═══════════════════════════════════════
+       PRINT STYLES
+    ═══════════════════════════════════════ */
+    @media print {
+      *, *::before, *::after {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
+      body { background: #fff; font-size: 11pt; }
+
+      .header, .tabbar, .action-bar, .add-bar,
+      .btn-ghost, .no-print, #screen-history, #screen-config {
+        display: none !important;
+      }
+
+      .screen { display: block !important; padding-bottom: 0; }
+
+      .container { padding: 0; max-width: 100%; }
+
+      .card {
+        box-shadow: none !important;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 10px;
+        page-break-inside: avoid;
+        border-radius: 6px;
+      }
+
+      /* Print-only elements */
+      .print-header { display: flex !important; }
+      .print-footer { display: block !important; }
+      .item-header .btn-ghost { display: none !important; }
+
+      .print-block {
+        display: block !important;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        padding: 9px 12px;
+        margin-bottom: 7px;
+        font-size: 9pt;
+        line-height: 1.75;
+      }
+      .print-block .pl { font-weight: 700; }
+      .print-block .pr { font-weight: 400; }
+
+      @page {
+        size: A4 portrait;
+        margin: 1cm;
+      }
+
+      body { font-size: 9pt; }
+
+      .total-card {
+        background: #1f1952 !important;
+        color: #fff !important;
+        border-radius: 6px;
+        padding: 10px 14px !important;
+      }
+      .total-row { font-size: 10pt !important; padding: 2px 0 !important; }
+      .total-row.big { font-size: 13pt !important; padding-top: 8px !important; margin-top: 6px !important; }
+
+      .card { padding: 10px 12px !important; margin-bottom: 7px !important; }
+      .card-title { margin-bottom: 8px !important; font-size: 10pt !important; }
+
+      .field label { display: none; }
+      .field input,
+      .field select,
+      .field textarea {
+        border: none;
+        padding: 1px 0;
+        font-size: 9pt;
+        background: transparent;
+      }
+      .field textarea { min-height: unset; }
+      .field { margin-bottom: 5px !important; }
+
+      table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+      thead th {
+        background: #1f1952 !important;
+        color: #fff !important;
+        padding: 5px 7px;
+        text-align: left;
+      }
+      tbody td { padding: 4px 7px; border-bottom: 1px solid #f3f4f6; font-size: 9pt; }
+
+      .badge { -webkit-print-color-adjust: exact !important; }
+
+      .print-header { padding: 12px 14px !important; margin: 0 0 8px !important; }
+    }
+
+    /* Print-only: hidden on screen */
+    .print-header { display: none; }
+    .print-footer  { display: none; }
+    .print-block   { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal: dica antes de imprimir -->
+<div id="printModal" style="
+  display:none; position:fixed; inset:0;
+  background:rgba(0,0,0,.55); z-index:500;
+  padding:20px; align-items:center; justify-content:center;
+">
+  <div style="
+    background:#fff; border-radius:18px; padding:24px;
+    max-width:340px; width:100%; box-shadow:0 8px 32px rgba(0,0,0,.2);
+  ">
+    <div style="font-size:22px; margin-bottom:10px;">🖨️ Antes de imprimir</div>
+    <p style="font-size:14px; color:#374151; line-height:1.65; margin-bottom:14px;">
+      Para o documento ficar <strong>limpo</strong>, sem URL e data do navegador:
+    </p>
+    <div style="background:#f3f4f6; border-radius:10px; padding:12px; font-size:13px; color:#374151; line-height:1.7; margin-bottom:18px;">
+      📱 <strong>Celular:</strong> toque em "Mais opções" → desative <em>Cabeçalhos e rodapés</em><br>
+      💻 <strong>PC:</strong> clique em "Mais configurações" → desmarque <em>Cabeçalhos e rodapés</em>
+    </div>
+    <button onclick="doprint()" style="
+      width:100%; padding:14px; background:#1f1952; color:#fff;
+      border:none; border-radius:12px; font-size:15px;
+      font-weight:700; cursor:pointer; font-family:inherit;
+    ">Entendido — Imprimir</button>
+    <button onclick="document.getElementById('printModal').style.display='none'" style="
+      width:100%; padding:10px; margin-top:8px; background:none;
+      border:none; color:#6b7280; font-size:14px; cursor:pointer; font-family:inherit;
+    ">Cancelar</button>
+  </div>
+</div>
+
+<!-- ── Header ── -->
+<div class="header no-print">
+  <h1>📋 Gerador de Orçamentos</h1>
+  <button class="header-btn" onclick="switchTab('config')">⚙️ Empresa</button>
+</div>
+
+<!-- ── Tab bar ── -->
+<div class="tabbar no-print">
+  <button id="tab-form"    class="active" onclick="switchTab('form')">Novo Orçamento</button>
+  <button id="tab-history"               onclick="switchTab('history')">Histórico</button>
+  <button id="tab-config"                onclick="switchTab('config')">Empresa</button>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: NOVO ORÇAMENTO
+════════════════════════════════════ -->
+<div class="screen active" id="screen-form">
+
+  <!-- Print-only header -->
+  <div class="print-header" id="printHeader" style="
+    align-items:flex-start; justify-content:space-between;
+    padding:18px 20px; border:2px solid #1f1952;
+    border-radius:8px; margin:16px 16px 12px;
+    background:#fff; gap:16px;
+  ">
+    <div style="flex:1;">
+      <div style="font-size:20pt; font-weight:800; color:#1f1952; margin-bottom:4px;" id="ph-name"></div>
+      <div style="font-size:9pt; color:#374151; line-height:1.8;" id="ph-details"></div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:10px;">
+      <img id="ph-logo" src="./logo.png" onerror="this.style.display='none'" style="width:72px; height:72px; object-fit:contain;" alt="Logo">
+      <div style="text-align:right;">
+        <div style="font-size:14pt; font-weight:800; color:#1f1952;">ORÇAMENTO</div>
+        <div style="font-size:9pt; color:#374151; line-height:1.8;" id="ph-info"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+
+    <!-- Dados do orçamento -->
+    <div class="card no-print">
+      <div class="card-title">📄 Dados do Orçamento</div>
+      <div class="row2">
+        <div class="field">
+          <label>Número</label>
+          <input type="text" id="qNum" readonly>
+        </div>
+        <div class="field">
+          <label>Data</label>
+          <input type="date" id="qDate">
+        </div>
+      </div>
+      <div class="field">
+        <label>Válido até</label>
+        <input type="date" id="qValidity">
+      </div>
+    </div>
+
+    <!-- Print-only: cliente -->
+    <div class="print-block" id="printClient"></div>
+
+    <!-- Cliente -->
+    <div class="card no-print">
+      <div class="card-title">👤 Dados do Cliente</div>
+      <div class="field">
+        <label>Nome / Empresa *</label>
+        <input type="text" id="cName" placeholder="Nome do cliente ou empresa">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Telefone</label>
+          <input type="tel" id="cPhone" placeholder="(51) 99999-9999" maxlength="15" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>CPF / CNPJ</label>
+          <input type="text" id="cDoc" placeholder="CPF ou CNPJ" maxlength="18" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label>Logradouro (Rua / Avenida)</label>
+        <input type="text" id="cAddr" placeholder="Ex: Rua das Flores">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Número</label>
+          <input type="text" id="cAddrNum" placeholder="Ex: 123" maxlength="10">
+        </div>
+        <div class="field">
+          <label>Complemento</label>
+          <input type="text" id="cAddrComp" placeholder="Apto, bloco, sala...">
+        </div>
+      </div>
+      <div class="field">
+        <label>Bairro</label>
+        <input type="text" id="cAddrNeigh" placeholder="Ex: Centro">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Cidade</label>
+          <input type="text" id="cCity" placeholder="Ex: Porto Alegre">
+        </div>
+        <div class="field">
+          <label>Estado (UF)</label>
+          <input type="text" id="cState" placeholder="RS" maxlength="2" style="text-transform:uppercase;">
+        </div>
+      </div>
+      <div class="field">
+        <label>CEP</label>
+        <input type="text" id="cCep" placeholder="00000-000" maxlength="9" inputmode="numeric">
+      </div>
+    </div>
+
+    <!-- Serviços e materiais -->
+    <div class="card">
+      <div class="card-title">🧱 Serviços e Materiais</div>
+
+      <div class="add-bar no-print">
+        <button class="add-labor"    onclick="addItem('labor')"   >+ Mão de Obra</button>
+        <button class="add-material" onclick="addItem('material')">+ Material</button>
+        <button class="add-fixed"    onclick="addItem('fixed')"   >+ Serviço Fixo</button>
+      </div>
+
+      <div id="itemsList"></div>
+
+      <div class="empty" id="emptyItems">
+        <div class="empty-icon">🔨</div>
+        Toque nos botões acima para<br>adicionar itens ao orçamento
+      </div>
+
+      <!-- Print table (hidden on screen) -->
+      <table id="printTable" style="display:none;">
+        <thead>
+          <tr>
+            <th style="width:44%">Descrição</th>
+            <th style="width:12%">Unid.</th>
+            <th style="width:11%">Qtd</th>
+            <th style="width:16%">Preço Unit.</th>
+            <th style="width:17%">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody id="printTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Totais -->
+    <div class="total-card" id="totalCard" style="display:none;">
+      <div class="total-row">
+        <span>Subtotal</span>
+        <span id="tSubtotal">R$ 0,00</span>
+      </div>
+      <div class="total-row" id="tDiscRow" style="display:none;">
+        <span>Desconto</span>
+        <span id="tDiscount">− R$ 0,00</span>
+      </div>
+      <div class="total-row big">
+        <span>TOTAL</span>
+        <span id="tTotal">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- Desconto (tela) -->
+    <div class="card no-print" id="discCard" style="display:none;">
+      <div class="card-title">💸 Desconto (opcional)</div>
+      <div class="row2">
+        <div class="field">
+          <label>Tipo</label>
+          <select id="discType" onchange="recalc()">
+            <option value="none">Sem desconto</option>
+            <option value="value">Valor em R$</option>
+            <option value="pct">Porcentagem %</option>
+          </select>
+        </div>
+        <div class="field" id="discValWrap" style="display:none;">
+          <label>Valor</label>
+          <input type="number" id="discVal" min="0" step="0.01" placeholder="0" oninput="recalc()">
+        </div>
+      </div>
+    </div>
+
+    <!-- Print-only: condições -->
+    <div class="print-block" id="printConditions"></div>
+
+    <!-- Condições -->
+    <div class="card no-print">
+      <div class="card-title">📝 Condições e Observações</div>
+      <div class="field">
+        <label>Condições de Pagamento</label>
+        <input type="text" id="qPayment" placeholder="Ex: 50% na aprovação, 50% na entrega">
+      </div>
+      <div class="field">
+        <label>Prazo de Execução</label>
+        <input type="text" id="qDeadline" placeholder="Ex: 15 dias úteis após aprovação">
+      </div>
+      <div class="field">
+        <label>Observações Gerais</label>
+        <textarea id="qNotes" placeholder="Materiais inclusos, garantias, exclusões..."></textarea>
+      </div>
+    </div>
+
+    <!-- Print footer -->
+    <div class="print-footer" id="printFooter" style="
+      margin-top:28px; border-top:1px solid #e5e7eb;
+      padding-top:14px; text-align:center;
+      font-size:9pt; color:#6b7280; line-height:1.8;
+    ">
+      <p>Este orçamento é válido até <strong id="pf-validity"></strong> e não tem valor fiscal.</p>
+      <p id="pf-company"></p>
+    </div>
+
+  </div><!-- /container -->
+
+  <!-- Action bar -->
+  <div class="action-bar no-print">
+    <button class="btn btn-outline" onclick="clearForm()">🗑 Limpar</button>
+    <button class="btn btn-primary" onclick="generatePDF()">🖨 Gerar PDF</button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: HISTÓRICO
+════════════════════════════════════ -->
+<div class="screen" id="screen-history">
+  <div class="container">
+    <div class="card">
+      <div class="card-title">📂 Orçamentos Anteriores</div>
+      <div id="histList">
+        <div class="empty">
+          <div class="empty-icon">📂</div>
+          Nenhum orçamento salvo ainda.<br>Gere o primeiro clicando em "Gerar PDF".
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════
+     SCREEN: CONFIGURAÇÃO
+════════════════════════════════════ -->
+<div class="screen" id="screen-config">
+  <div class="container">
+
+    <div class="card">
+      <div class="card-title">🏢 Dados da Empresa</div>
+
+      <div class="logo-wrap">
+        <div class="logo-box" id="logoBox">
+          <img src="./logo.png" onerror="this.parentElement.innerHTML='🏗️'" style="width:100%;height:100%;object-fit:contain;" alt="Logo">
+        </div>
+        <div style="flex:1;">
+          <div style="background:#f3f4f6; border-radius:10px; padding:12px; font-size:13px; color:#374151; line-height:1.7;">
+            📁 Coloque o arquivo <strong>logo.png</strong> na mesma pasta do app.<br>
+            <span style="color:var(--muted); font-size:12px;">Ela aparecerá automaticamente aqui e no PDF.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Nome da Empresa *</label>
+        <input type="text" id="cfg-name" placeholder="Ex: Pavimentação Silva">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>CNPJ</label>
+          <input type="text" id="cfg-cnpj" placeholder="00.000.000/0000-00" maxlength="18" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>Inscrição Estadual</label>
+          <input type="text" id="cfg-ie" placeholder="000/0000000" maxlength="11" inputmode="numeric">
+        </div>
+      </div>
+      <div class="field">
+        <label>Endereço</label>
+        <input type="text" id="cfg-addr" placeholder="Rua, número, bairro">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Cidade / Estado</label>
+          <input type="text" id="cfg-city" placeholder="Cidade - UF">
+        </div>
+        <div class="field">
+          <label>CEP</label>
+          <input type="text" id="cfg-cep" placeholder="00000-000">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Telefone / WhatsApp</label>
+          <input type="tel" id="cfg-phone" placeholder="(51) 99999-9999" maxlength="15" inputmode="numeric">
+        </div>
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="cfg-email" placeholder="empresa@email.com">
+        </div>
+      </div>
+      <div class="field">
+        <label>Site / Instagram</label>
+        <input type="text" id="cfg-web" placeholder="@empresa ou www.site.com.br">
+      </div>
+      <div class="field">
+        <label>Cor Principal da Empresa</label>
+        <input type="color" id="cfg-color" value="#1f1952">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">⚙️ Configurações Padrão</div>
+      <div class="field">
+        <label>Próximo número do orçamento</label>
+        <input type="number" id="cfg-num" min="1" value="1">
+      </div>
+      <div class="field">
+        <label>Validade padrão (dias)</label>
+        <input type="number" id="cfg-validity" min="1" value="15">
+      </div>
+      <div class="field">
+        <label>Pagamento padrão</label>
+        <input type="text" id="cfg-payment" placeholder="Ex: 50% entrada, 50% entrega">
+      </div>
+    </div>
+
+    <div class="action-bar no-print">
+      <button class="btn btn-primary btn-block" onclick="saveConfig()">💾 Salvar Configurações</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────
+   STATE
+───────────────────────────────────────── */
+let items = [];
+let cfg   = {};
+
+/* ─────────────────────────────────────────
+   BOOT
+───────────────────────────────────────── */
+addEventListener('DOMContentLoaded', () => {
+  loadConfig();
+  initForm();
+  renderItems();
+  initMasks();
+});
+
+/* ─────────────────────────────────────────
+   INPUT MASKS
+───────────────────────────────────────── */
+function maskPhone(raw) {
+  const d = raw.replace(/\D/g, '').slice(0, 11);
+  if (!d) return '';
+  if (d.length <= 2)  return `(${d}`;
+  if (d.length <= 7)  return `(${d.slice(0,2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+}
+
+function maskDoc(raw) {
+  const d = raw.replace(/\D/g, '').slice(0, 14);
+  if (!d) return '';
+  if (d.length <= 11) {
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `${d.slice(0,3)}.${d.slice(3)}`;
+    if (d.length <= 9) return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6)}`;
+    return `${d.slice(0,3)}.${d.slice(3,6)}.${d.slice(6,9)}-${d.slice(9)}`;
+  }
+  if (d.length <= 2)  return d;
+  if (d.length <= 5)  return `${d.slice(0,2)}.${d.slice(2)}`;
+  if (d.length <= 8)  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`;
+  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+}
+
+function maskCNPJ(raw) {
+  const d = raw.replace(/\D/g, '').slice(0, 14);
+  if (!d) return '';
+  if (d.length <= 2)  return d;
+  if (d.length <= 5)  return `${d.slice(0,2)}.${d.slice(2)}`;
+  if (d.length <= 8)  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5)}`;
+  if (d.length <= 12) return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8)}`;
+  return `${d.slice(0,2)}.${d.slice(2,5)}.${d.slice(5,8)}/${d.slice(8,12)}-${d.slice(12)}`;
+}
+
+function maskIE(raw) {
+  const d = raw.replace(/\D/g, '').slice(0, 10);
+  if (!d) return '';
+  if (d.length <= 3) return d;
+  return `${d.slice(0,3)}/${d.slice(3)}`;
+}
+
+function maskCEP(raw) {
+  const d = raw.replace(/\D/g, '').slice(0, 8);
+  if (!d) return '';
+  if (d.length <= 5) return d;
+  return `${d.slice(0,5)}-${d.slice(5)}`;
+}
+
+function applyMask(id, maskFn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', function() {
+    const selStart = this.selectionStart;
+    const oldVal   = this.value;
+    const digitsBeforeCursor = oldVal.slice(0, selStart).replace(/\D/g, '').length;
+    this.value = maskFn(this.value);
+    let count = 0, newPos = this.value.length;
+    for (let i = 0; i < this.value.length; i++) {
+      if (/\d/.test(this.value[i])) count++;
+      if (count === digitsBeforeCursor) { newPos = i + 1; break; }
+    }
+    this.setSelectionRange(newPos, newPos);
+  });
+}
+
+function initMasks() {
+  applyMask('cPhone',   maskPhone);
+  applyMask('cDoc',     maskDoc);
+  applyMask('cCep',     maskCEP);
+  applyMask('cfg-phone',maskPhone);
+  applyMask('cfg-cnpj', maskCNPJ);
+  applyMask('cfg-ie',   maskIE);
+
+  // UF: force uppercase
+  const stateEl = document.getElementById('cState');
+  if (stateEl) stateEl.addEventListener('input', function() {
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
+    this.setSelectionRange(pos, pos);
+  });
+}
+
+/* ─────────────────────────────────────────
+   CONFIG
+───────────────────────────────────────── */
+function loadConfig() {
+  const raw = localStorage.getItem('orc_cfg');
+  cfg = raw ? JSON.parse(raw) : {
+    name:'', cnpj:'', ie:'', addr:'', city:'', cep:'',
+    phone:'', email:'', web:'', color:'#1f1952',
+    nextNum:1, validity:15, payment:''
+  };
+
+  setVal('cfg-name',    cfg.name);
+  setVal('cfg-cnpj',    cfg.cnpj);
+  setVal('cfg-ie',      cfg.ie);
+  setVal('cfg-addr',    cfg.addr);
+  setVal('cfg-city',    cfg.city);
+  setVal('cfg-cep',     cfg.cep);
+  setVal('cfg-phone',   cfg.phone);
+  setVal('cfg-email',   cfg.email);
+  setVal('cfg-web',     cfg.web);
+  setVal('cfg-color',   cfg.color || '#1f1952');
+  setVal('cfg-num',     cfg.nextNum || 1);
+  setVal('cfg-validity',cfg.validity || 15);
+  setVal('cfg-payment', cfg.payment);
+
+  applyColor(cfg.color || '#1f1952');
+}
+
+function saveConfig() {
+  cfg.name     = getVal('cfg-name');
+  cfg.cnpj     = getVal('cfg-cnpj');
+  cfg.ie       = getVal('cfg-ie');
+  cfg.addr     = getVal('cfg-addr');
+  cfg.city     = getVal('cfg-city');
+  cfg.cep      = getVal('cfg-cep');
+  cfg.phone    = getVal('cfg-phone');
+  cfg.email    = getVal('cfg-email');
+  cfg.web      = getVal('cfg-web');
+  cfg.color    = getVal('cfg-color');
+  cfg.nextNum  = parseInt(getVal('cfg-num'))     || 1;
+  cfg.validity = parseInt(getVal('cfg-validity')) || 15;
+  cfg.payment  = getVal('cfg-payment');
+
+  persist();
+  applyColor(cfg.color);
+  showToast('✅ Configurações salvas!');
+  switchTab('form');
+}
+
+function applyColor(hex) {
+  const r = document.documentElement.style;
+  r.setProperty('--primary', hex);
+  r.setProperty('--primary-dark', shiftHex(hex, -30));
+  r.setProperty('--primary-light', hexToLight(hex));
+}
+
+function shiftHex(hex, delta) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const c = ch => Math.min(255, Math.max(0, ((n >> ch) & 0xff) + delta));
+  return `rgb(${c(16)},${c(8)},${c(0)})`;
+}
+
+function hexToLight(hex) {
+  return hex + '22';
+}
+
+/* ─────────────────────────────────────────
+   FORM INIT
+───────────────────────────────────────── */
+function initForm() {
+  const today = new Date();
+  setVal('qDate', fmtIso(today));
+  const exp = new Date(today);
+  exp.setDate(exp.getDate() + (cfg.validity || 15));
+  setVal('qValidity', fmtIso(exp));
+  setVal('qNum', 'ORC-' + String(cfg.nextNum || 1).padStart(4, '0'));
+  if (cfg.payment) setVal('qPayment', cfg.payment);
+}
+
+/* ─────────────────────────────────────────
+   TABS
+───────────────────────────────────────── */
+function switchTab(tab) {
+  ['form','history','config'].forEach(t => {
+    document.getElementById(`screen-${t}`).classList.toggle('active', t === tab);
+    const btn = document.getElementById(`tab-${t}`);
+    if (btn) btn.classList.toggle('active', t === tab);
+  });
+  if (tab === 'history') renderHistory();
+}
+
+/* ─────────────────────────────────────────
+   ITEMS
+───────────────────────────────────────── */
+const UNITS = {
+  labor:    ['m²','m³','ml','diária','hora','vb'],
+  material: ['un','kg','m²','m³','ml','saco','litro','caixa','rolo','peça','vb'],
+  fixed:    ['vb']
+};
+const LABELS = { labor:'Mão de Obra', material:'Material', fixed:'Serviço Fixo' };
+const BADGES  = { labor:'badge-labor', material:'badge-material', fixed:'badge-fixed' };
+
+function addItem(type) {
+  items.push({ id: Date.now(), type, desc:'', unit: UNITS[type][0], qty:1, price:0, total:0 });
+  renderItems();
+  recalc();
+  // Scroll to new item
+  setTimeout(() => {
+    const list = document.getElementById('itemsList');
+    list.lastElementChild?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }, 50);
+}
+
+function removeItem(id) {
+  items = items.filter(i => i.id !== id);
+  renderItems();
+  recalc();
+}
+
+function updateField(id, field, value) {
+  const item = items.find(i => i.id === id);
+  if (!item) return;
+  item[field] = value;
+  const sub = calcItemSub(item);
+  const el = document.querySelector(`#item-${id} .item-sub`);
+  if (el) el.textContent = brl(sub);
+  recalc();
+}
+
+function calcItemSub(item) {
+  return item.type === 'fixed' ? (item.total || 0) : (item.price || 0) * (item.qty || 0);
+}
+
+function renderItems() {
+  const list  = document.getElementById('itemsList');
+  const empty = document.getElementById('emptyItems');
+
+  empty.style.display = items.length ? 'none' : '';
+
+  if (!items.length) { list.innerHTML = ''; return; }
+
+  list.innerHTML = items.map(item => {
+    const unitOpts = UNITS[item.type]
+      .map(u => `<option value="${u}"${item.unit===u?' selected':''}>${u}</option>`)
+      .join('');
+
+    if (item.type === 'fixed') {
+      return `
+      <div class="item-row" id="item-${item.id}">
+        <div class="item-header">
+          <span class="badge ${BADGES[item.type]}">${LABELS[item.type]}</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="item-sub">${brl(item.total)}</span>
+            <button class="btn-ghost no-print" onclick="removeItem(${item.id})">✕</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Descrição</label>
+          <input type="text" placeholder="Ex: Pavimentação completa da área" value="${esc(item.desc)}"
+            oninput="updateField(${item.id},'desc',this.value)">
+        </div>
+        <div class="field">
+          <label>Valor Total (R$)</label>
+          <input type="number" min="0" step="0.01" placeholder="0,00" value="${item.total||''}"
+            oninput="updateField(${item.id},'total',parseFloat(this.value)||0)">
+        </div>
+      </div>`;
+    }
+
+    return `
+    <div class="item-row" id="item-${item.id}">
+      <div class="item-header">
+        <span class="badge ${BADGES[item.type]}">${LABELS[item.type]}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span class="item-sub">${brl((item.price||0)*(item.qty||0))}</span>
+          <button class="btn-ghost no-print" onclick="removeItem(${item.id})">✕</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Descrição</label>
+        <input type="text"
+          placeholder="${item.type==='labor'?'Ex: Assentamento de piso intertravado':'Ex: Brita nº 1 — 20kg'}"
+          value="${esc(item.desc)}" oninput="updateField(${item.id},'desc',this.value)">
+      </div>
+      <div class="row3">
+        <div class="field">
+          <label>Unidade</label>
+          <select onchange="updateField(${item.id},'unit',this.value)">${unitOpts}</select>
+        </div>
+        <div class="field">
+          <label>Quantidade</label>
+          <input type="number" min="0" step="0.01" value="${item.qty}"
+            oninput="updateField(${item.id},'qty',parseFloat(this.value)||0)">
+        </div>
+        <div class="field">
+          <label>Preço Unit.</label>
+          <input type="number" min="0" step="0.01" placeholder="0,00" value="${item.price||''}"
+            oninput="updateField(${item.id},'price',parseFloat(this.value)||0)">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ─────────────────────────────────────────
+   TOTALS
+───────────────────────────────────────── */
+function recalc() {
+  const subtotal = items.reduce((s, i) => s + calcItemSub(i), 0);
+  const dtype    = getVal('discType');
+  const dval     = parseFloat(getVal('discVal')) || 0;
+  let   disc     = 0;
+  if (dtype === 'value') disc = dval;
+  if (dtype === 'pct')   disc = subtotal * dval / 100;
+  disc = Math.min(Math.max(disc, 0), subtotal);
+  const total = subtotal - disc;
+
+  const show = items.length > 0;
+  document.getElementById('totalCard').style.display = show ? '' : 'none';
+  document.getElementById('discCard').style.display  = show ? '' : 'none';
+
+  setText('tSubtotal', brl(subtotal));
+  setText('tTotal',    brl(total));
+
+  const dRow = document.getElementById('tDiscRow');
+  if (disc > 0) {
+    dRow.style.display = '';
+    setText('tDiscount', `− ${brl(disc)}`);
+  } else {
+    dRow.style.display = 'none';
+  }
+
+  const wrap = document.getElementById('discValWrap');
+  wrap.style.display = dtype !== 'none' ? '' : 'none';
+}
+
+/* ─────────────────────────────────────────
+   PDF / PRINT
+───────────────────────────────────────── */
+function generatePDF() {
+  if (!cfg.name) {
+    showToast('⚠️ Configure os dados da empresa primeiro!');
+    switchTab('config');
+    return;
+  }
+  if (!getVal('cName')) {
+    showToast('⚠️ Informe o nome do cliente');
+    return;
+  }
+
+  buildPrintHeader();
+  buildPrintContent();
+  buildPrintTable();
+  saveToHistory();
+  bumpNumber();
+  const modal = document.getElementById('printModal');
+  modal.style.display = 'flex';
+}
+
+function doprint() {
+  document.getElementById('printModal').style.display = 'none';
+  window.print();
+}
+
+function buildPrintHeader() {
+  setText('ph-name', cfg.name);
+
+  const lines = [];
+  if (cfg.cnpj)  lines.push(`<b>CNPJ:</b> ${cfg.cnpj}`);
+  if (cfg.ie)    lines.push(`<b>IE:</b> ${cfg.ie}`);
+  if (cfg.addr || cfg.city || cfg.cep) {
+    let addrLine = `<b>Endereço:</b> ${cfg.addr || ''}`;
+    if (cfg.city) addrLine += ` - ${cfg.city}`;
+    if (cfg.cep)  addrLine += ` - CEP: ${cfg.cep}`;
+    lines.push(addrLine);
+  }
+  if (cfg.phone) lines.push(`<b>Tel:</b> ${cfg.phone}`);
+  if (cfg.email) lines.push(cfg.email);
+  if (cfg.web)   lines.push(cfg.web);
+  document.getElementById('ph-details').innerHTML = lines.join('<br>');
+
+  const num  = getVal('qNum');
+  const date = fmtBR(getVal('qDate'));
+  const val  = fmtBR(getVal('qValidity'));
+  document.getElementById('ph-info').innerHTML =
+    `Nº ${num}<br>Data: ${date}<br>Válido até: ${val}`;
+
+  setText('pf-validity', val);
+  setText('pf-company',  `${cfg.name}${cfg.phone ? ' · Tel: ' + cfg.phone : ''}${cfg.email ? ' · ' + cfg.email : ''}`);
+}
+
+function buildPrintContent() {
+  // ── Cliente ──
+  const name      = getVal('cName');
+  const phone     = getVal('cPhone');
+  const doc       = getVal('cDoc');
+  const addr      = getVal('cAddr');
+  const addrNum   = getVal('cAddrNum');
+  const addrComp  = getVal('cAddrComp');
+  const addrNeigh = getVal('cAddrNeigh');
+  const city      = getVal('cCity');
+  const state     = getVal('cState');
+  const cep       = getVal('cCep');
+
+  // Build full address on one line
+  let addrParts = [];
+  if (addr)     addrParts.push(addr);
+  if (addrNum)  addrParts.push(addrNum);
+  if (addrComp) addrParts.push(addrComp);
+  let addrLine = addrParts.join(', ');
+  if (addrNeigh)        addrLine += ` - ${addrNeigh}`;
+  if (city && state)    addrLine += ` - ${city} - ${state}`;
+  else if (city)        addrLine += ` - ${city}`;
+  else if (state)       addrLine += ` - ${state}`;
+  if (cep)              addrLine += ` - CEP: ${cep}`;
+
+  let rows = [];
+  rows.push(`<span class="pl">Cliente:</span> <span class="pr">${esc(name)}</span>`);
+
+  let meta = [];
+  if (phone) meta.push(`<span class="pl">Telefone:</span> <span class="pr">${esc(phone)}</span>`);
+  if (doc)   meta.push(`<span class="pl">CPF/CNPJ:</span> <span class="pr">${esc(doc)}</span>`);
+  if (meta.length) rows.push(meta.join(' &nbsp;&nbsp; '));
+
+  if (addrLine) rows.push(`<span class="pl">Endereço:</span> <span class="pr">${esc(addrLine)}</span>`);
+
+  document.getElementById('printClient').innerHTML = rows.join('<br>');
+
+  // ── Condições ──
+  const payment  = getVal('qPayment');
+  const deadline = getVal('qDeadline');
+  const notes    = getVal('qNotes');
+
+  let cRows = [];
+  if (payment)  cRows.push(`<span class="pl">Condições de Pagamento:</span> <span class="pr">${esc(payment)}</span>`);
+  if (deadline) cRows.push(`<span class="pl">Prazo médio de Execução:</span> <span class="pr">${esc(deadline)}</span>`);
+  if (notes)    cRows.push(`<span class="pl">Observações complementares:</span> <span class="pr">${esc(notes)}</span>`);
+
+  const condEl = document.getElementById('printConditions');
+  condEl.innerHTML = cRows.join('<br>');
+  condEl.style.display = cRows.length ? '' : 'none';
+}
+
+function buildPrintTable() {
+  const tbody = document.getElementById('printTableBody');
+  tbody.innerHTML = items.map(item => {
+    if (item.type === 'fixed') {
+      return `<tr>
+        <td colspan="4">${esc(item.desc) || '—'} <span style="font-size:9pt;color:#6b7280;">[Serviço Fixo]</span></td>
+        <td style="font-weight:700;">${brl(item.total)}</td>
+      </tr>`;
+    }
+    return `<tr>
+      <td>${esc(item.desc) || '—'}</td>
+      <td>${item.unit}</td>
+      <td>${fmtNum(item.qty)}</td>
+      <td>${brl(item.price)}</td>
+      <td style="font-weight:700;">${brl(calcItemSub(item))}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('printTable').style.display = items.length ? '' : 'none';
+  document.getElementById('itemsList').style.display  = 'none'; // hide card items, show table
+}
+
+/* ─────────────────────────────────────────
+   HISTORY
+───────────────────────────────────────── */
+function saveToHistory() {
+  const subtotal = items.reduce((s, i) => s + calcItemSub(i), 0);
+  const dtype    = getVal('discType');
+  const dval     = parseFloat(getVal('discVal')) || 0;
+  let   disc     = 0;
+  if (dtype === 'value') disc = dval;
+  if (dtype === 'pct')   disc = subtotal * dval / 100;
+  disc = Math.min(Math.max(disc, 0), subtotal);
+
+  const q = {
+    number:    getVal('qNum'),
+    date:      getVal('qDate'),
+    validity:  getVal('qValidity'),
+    client:    getVal('cName'),
+    cPhone:    getVal('cPhone'),
+    cDoc:      getVal('cDoc'),
+    cAddr:      getVal('cAddr'),
+    cAddrNum:   getVal('cAddrNum'),
+    cAddrComp:  getVal('cAddrComp'),
+    cAddrNeigh: getVal('cAddrNeigh'),
+    cCity:      getVal('cCity'),
+    cState:     getVal('cState'),
+    cCep:       getVal('cCep'),
+    payment:   getVal('qPayment'),
+    deadline:  getVal('qDeadline'),
+    notes:     getVal('qNotes'),
+    discType:  dtype,
+    discVal:   dval,
+    total:     subtotal - disc,
+    items:     JSON.parse(JSON.stringify(items))
+  };
+
+  const hist = JSON.parse(localStorage.getItem('orc_hist') || '[]');
+  hist.unshift(q);
+  localStorage.setItem('orc_hist', JSON.stringify(hist.slice(0, 25)));
+}
+
+function renderHistory() {
+  const hist = JSON.parse(localStorage.getItem('orc_hist') || '[]');
+  const el   = document.getElementById('histList');
+
+  if (!hist.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📂</div>Nenhum orçamento salvo ainda.<br>Gere o primeiro clicando em "Gerar PDF".</div>`;
+    return;
+  }
+
+  el.innerHTML = hist.map((q, i) => `
+    <div class="hist-card">
+      <div class="hist-top">
+        <div>
+          <div class="hist-num">${q.number}</div>
+          <div class="hist-info">${q.client || 'Cliente não informado'}<br>${fmtBR(q.date)}</div>
+        </div>
+        <div class="hist-total">${brl(q.total)}</div>
+      </div>
+      <button class="btn btn-outline btn-block btn-sm" style="margin-top:10px;" onclick="loadQuote(${i})">↩ Reabrir orçamento</button>
+    </div>
+  `).join('');
+}
+
+function loadQuote(i) {
+  const hist = JSON.parse(localStorage.getItem('orc_hist') || '[]');
+  const q    = hist[i];
+  if (!q) return;
+
+  setVal('qNum',      q.number);
+  setVal('qDate',     q.date);
+  setVal('qValidity', q.validity || '');
+  setVal('cName',     q.client   || '');
+  setVal('cPhone',    q.cPhone    || '');
+  setVal('cDoc',      q.cDoc      || '');
+  setVal('cAddr',      q.cAddr      || '');
+  setVal('cAddrNum',   q.cAddrNum   || '');
+  setVal('cAddrComp',  q.cAddrComp  || '');
+  setVal('cAddrNeigh', q.cAddrNeigh || '');
+  setVal('cCity',      q.cCity      || '');
+  setVal('cState',     q.cState     || '');
+  setVal('cCep',       q.cCep       || '');
+  setVal('qPayment',  q.payment  || '');
+  setVal('qDeadline', q.deadline || '');
+  setVal('qNotes',    q.notes    || '');
+  setVal('discType',  q.discType || 'none');
+  setVal('discVal',   q.discVal  || '');
+
+  items = q.items || [];
+  renderItems();
+  recalc();
+  switchTab('form');
+}
+
+function bumpNumber() {
+  cfg.nextNum = (cfg.nextNum || 1) + 1;
+  persist();
+  setVal('cfg-num', cfg.nextNum);
+  // Update display for next quote (don't change current)
+}
+
+/* ─────────────────────────────────────────
+   CLEAR FORM
+───────────────────────────────────────── */
+function clearForm() {
+  if (!confirm('Limpar o orçamento atual e começar um novo?')) return;
+  items = [];
+
+  ['cName','cPhone','cDoc','cAddr','cAddrNum','cAddrComp','cAddrNeigh','cCity','cState','cCep','qNotes','qDeadline'].forEach(id => setVal(id, ''));
+  setVal('discType', 'none');
+  setVal('discVal', '');
+  document.getElementById('discValWrap').style.display = 'none';
+
+  // Advance number
+  cfg.nextNum = (cfg.nextNum || 1) + 1;
+  persist();
+  initForm();
+  renderItems();
+  recalc();
+  showToast('🗑 Pronto para novo orçamento');
+}
+
+/* ─────────────────────────────────────────
+   HELPERS
+───────────────────────────────────────── */
+function persist() { localStorage.setItem('orc_cfg', JSON.stringify(cfg)); }
+function getVal(id) { return document.getElementById(id)?.value || ''; }
+function setVal(id, v) { const el = document.getElementById(id); if (el) el.value = v ?? ''; }
+function setText(id, v) { const el = document.getElementById(id); if (el) el.textContent = v; }
+
+function brl(v) {
+  return (v || 0).toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+}
+function fmtNum(v) {
+  return (v || 0).toLocaleString('pt-BR', { maximumFractionDigits:2 });
+}
+function fmtIso(d) {
+  return d.toISOString().split('T')[0];
+}
+function fmtBR(s) {
+  if (!s) return '';
+  const [y, m, d] = s.split('-');
+  return `${d}/${m}/${y}`;
+}
+function esc(s) {
+  return (s || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// Hide printTable columns on screen (they're only for print)
+addEventListener('afterprint', () => {
+  document.getElementById('printTable').style.display   = 'none';
+  document.getElementById('itemsList').style.display    = '';
+});
+</script>
+</body>
+</html>

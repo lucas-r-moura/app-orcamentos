@@ -1110,6 +1110,24 @@ function recalc() {
 /* ─────────────────────────────────────────
    PDF / PRINT
 ───────────────────────────────────────── */
+function loadLogoBase64() {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch { resolve(''); }
+    };
+    img.onerror = () => resolve('');
+    img.src = './logo.png?t=' + Date.now();
+  });
+}
+
 function generatePDF() {
   if (!cfg.name) {
     showToast('⚠️ Configure os dados da empresa primeiro!');
@@ -1128,29 +1146,22 @@ function generatePDF() {
   const client = getVal('cName').trim().replace(/\s+/g, '-');
   const filename = `Orcamento-${qNum}-${client || 'Cliente'}.pdf`;
 
-  buildPDFDocument();
-
-  const el = document.getElementById('pdfDoc');
-  el.style.cssText = 'display:block; width:190mm; background:#fff;';
   showToast('⏳ Gerando PDF...');
 
-  setTimeout(() => {
+  loadLogoBase64().then(logoSrc => {
+    const htmlContent = buildPDFContent(logoSrc);
     html2pdf().set({
       margin:      [8, 8, 8, 8],
       filename:    filename,
       image:       { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: { scale: 2, useCORS: false, logging: false, allowTaint: true },
       jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(el).save().then(() => {
-      el.style.cssText = 'display:none; width:190mm; background:#fff;';
-      el.innerHTML = '';
+    }).from(htmlContent, 'string').save().then(() => {
       showToast('✅ PDF baixado!');
     }).catch(() => {
-      el.style.cssText = 'display:none; width:190mm; background:#fff;';
-      el.innerHTML = '';
       showToast('❌ Erro ao gerar o PDF');
     });
-  }, 300);
+  });
 }
 
 function buildClientAddr() {
@@ -1165,7 +1176,7 @@ function buildClientAddr() {
   return a;
 }
 
-function buildPDFDocument() {
+function buildPDFContent(logoSrc) {
   const color = cfg.color || '#1f1952';
   const qNum  = getVal('qNum');
   const qDate = fmtBR(getVal('qDate'));
@@ -1222,8 +1233,12 @@ function buildPDFDocument() {
   if (dead)  condRows.push(`<b>Prazo médio de Execução:</b> ${esc(dead)}`);
   if (notes) condRows.push(`<b>Observações complementares:</b> ${esc(notes)}`);
 
-  document.getElementById('pdfDoc').innerHTML = `
-<div style="font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#111;line-height:1.5;padding:2px;">
+  const logoTag = logoSrc
+    ? `<img src="${logoSrc}" style="width:60px;height:60px;object-fit:contain;" alt="">`
+    : '';
+
+  return `
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#111;line-height:1.5;padding:2px;width:190mm;">
 
   <div style="display:flex;align-items:flex-start;justify-content:space-between;border:2px solid ${color};border-radius:8px;padding:13px 15px;margin-bottom:9px;gap:12px;">
     <div style="flex:1;">
@@ -1231,7 +1246,7 @@ function buildPDFDocument() {
       <div style="font-size:8.5pt;color:#444;line-height:1.85;">${compLines.join('<br>')}</div>
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0;">
-      <img src="./logo.png" onerror="this.style.display='none'" style="width:60px;height:60px;object-fit:contain;" alt="">
+      ${logoTag}
       <div style="text-align:right;border:1.5px solid ${color};border-radius:6px;padding:7px 11px;">
         <div style="font-size:12pt;font-weight:800;color:${color};">ORÇAMENTO</div>
         <div style="font-size:8.5pt;color:#444;line-height:1.85;">Nº ${esc(qNum)}<br>Data: ${qDate}<br>Válido até: ${qVal}</div>

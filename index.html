@@ -8,6 +8,7 @@
   <meta name="apple-mobile-web-app-title" content="Orçamento">
   <meta name="theme-color" content="#1f1952">
   <title>Orçamentos</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     :root {
       --primary: #1f1952;
@@ -437,35 +438,8 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Modal: dica antes de imprimir -->
-<div id="printModal" style="
-  display:none; position:fixed; inset:0;
-  background:rgba(0,0,0,.55); z-index:500;
-  padding:20px; align-items:center; justify-content:center;
-">
-  <div style="
-    background:#fff; border-radius:18px; padding:24px;
-    max-width:340px; width:100%; box-shadow:0 8px 32px rgba(0,0,0,.2);
-  ">
-    <div style="font-size:22px; margin-bottom:10px;">🖨️ Antes de imprimir</div>
-    <p style="font-size:14px; color:#374151; line-height:1.65; margin-bottom:14px;">
-      Para o documento ficar <strong>limpo</strong>, sem URL e data do navegador:
-    </p>
-    <div style="background:#f3f4f6; border-radius:10px; padding:12px; font-size:13px; color:#374151; line-height:1.7; margin-bottom:18px;">
-      📱 <strong>Celular:</strong> toque em "Mais opções" → desative <em>Cabeçalhos e rodapés</em><br>
-      💻 <strong>PC:</strong> clique em "Mais configurações" → desmarque <em>Cabeçalhos e rodapés</em>
-    </div>
-    <button onclick="doprint()" style="
-      width:100%; padding:14px; background:#1f1952; color:#fff;
-      border:none; border-radius:12px; font-size:15px;
-      font-weight:700; cursor:pointer; font-family:inherit;
-    ">Entendido — Imprimir</button>
-    <button onclick="document.getElementById('printModal').style.display='none'" style="
-      width:100%; padding:10px; margin-top:8px; background:none;
-      border:none; color:#6b7280; font-size:14px; cursor:pointer; font-family:inherit;
-    ">Cancelar</button>
-  </div>
-</div>
+<!-- Div oculta usada como template para geração do PDF -->
+<div id="pdfDoc" style="display:none; position:fixed; top:-9999px; left:0; width:190mm; background:#fff;"></div>
 
 <!-- ── Header ── -->
 <div class="header no-print">
@@ -682,7 +656,7 @@
   <!-- Action bar -->
   <div class="action-bar no-print">
     <button class="btn btn-outline" onclick="clearForm()">🗑 Limpar</button>
-    <button class="btn btn-primary" onclick="generatePDF()">🖨 Gerar PDF</button>
+    <button class="btn btn-primary" onclick="generatePDF()">⬇️ Baixar PDF</button>
   </div>
 </div>
 
@@ -1147,18 +1121,158 @@ function generatePDF() {
     return;
   }
 
-  buildPrintHeader();
-  buildPrintContent();
-  buildPrintTable();
   saveToHistory();
   bumpNumber();
-  const modal = document.getElementById('printModal');
-  modal.style.display = 'flex';
+
+  const qNum   = getVal('qNum');
+  const client = getVal('cName').trim().replace(/\s+/g, '-');
+  const filename = `Orcamento-${qNum}-${client || 'Cliente'}.pdf`;
+
+  buildPDFDocument();
+
+  const el = document.getElementById('pdfDoc');
+  el.style.display = 'block';
+  showToast('⏳ Gerando PDF...');
+
+  html2pdf().set({
+    margin:      [8, 8, 8, 8],
+    filename:    filename,
+    image:       { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, logging: false },
+    jsPDF:       { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(el).save().then(() => {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    showToast('✅ PDF baixado!');
+  }).catch(() => {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    showToast('❌ Erro ao gerar o PDF');
+  });
 }
 
-function doprint() {
-  document.getElementById('printModal').style.display = 'none';
-  window.print();
+function buildClientAddr() {
+  const parts = [getVal('cAddr'), getVal('cAddrNum'), getVal('cAddrComp')].filter(Boolean);
+  let a = parts.join(', ');
+  const neigh = getVal('cAddrNeigh'), city = getVal('cCity'), state = getVal('cState'), cep = getVal('cCep');
+  if (neigh)          a += ` - ${neigh}`;
+  if (city && state)  a += ` - ${city} - ${state}`;
+  else if (city)      a += ` - ${city}`;
+  else if (state)     a += ` - ${state}`;
+  if (cep)            a += ` - CEP: ${cep}`;
+  return a;
+}
+
+function buildPDFDocument() {
+  const color = cfg.color || '#1f1952';
+  const qNum  = getVal('qNum');
+  const qDate = fmtBR(getVal('qDate'));
+  const qVal  = fmtBR(getVal('qValidity'));
+
+  // ── Empresa ──
+  const compLines = [];
+  if (cfg.cnpj)  compLines.push(`<b>CNPJ:</b> ${esc(cfg.cnpj)}`);
+  if (cfg.ie)    compLines.push(`<b>IE:</b> ${esc(cfg.ie)}`);
+  {
+    let a = cfg.addr || '';
+    if (cfg.city) a += (a ? ' - ' : '') + cfg.city;
+    if (cfg.cep)  a += ` - CEP: ${cfg.cep}`;
+    if (a) compLines.push(`<b>Endereço:</b> ${a}`);
+  }
+  if (cfg.phone) compLines.push(`<b>Tel:</b> ${esc(cfg.phone)}`);
+  if (cfg.email) compLines.push(esc(cfg.email));
+  if (cfg.web)   compLines.push(esc(cfg.web));
+
+  // ── Cliente ──
+  const cName      = getVal('cName');
+  const cPhone     = getVal('cPhone');
+  const cDoc       = getVal('cDoc');
+  const clientAddr = buildClientAddr();
+
+  // ── Totais ──
+  const subtotal = items.reduce((s, i) => s + calcItemSub(i), 0);
+  const dtype = getVal('discType'), dval = parseFloat(getVal('discVal')) || 0;
+  let disc = dtype === 'value' ? dval : (dtype === 'pct' ? subtotal * dval / 100 : 0);
+  disc = Math.min(Math.max(disc, 0), subtotal);
+  const total = subtotal - disc;
+
+  // ── Itens ──
+  const td = (v, align = 'left', bold = false) =>
+    `<td style="padding:5px 8px;border-bottom:1px solid #f0f0f0;text-align:${align};${bold ? 'font-weight:700;' : ''}">${v}</td>`;
+
+  const itemRows = items.map(item => {
+    if (item.type === 'fixed') return `<tr>
+      ${td(`${esc(item.desc)||'—'} <span style="color:#888;font-size:7.5pt;">[Serviço Fixo]</span>`)}
+      ${td('')}${td('')}${td('')}
+      ${td(brl(item.total), 'right', true)}</tr>`;
+    return `<tr>
+      ${td(esc(item.desc)||'—')}
+      ${td(item.unit, 'center')}
+      ${td(fmtNum(item.qty), 'center')}
+      ${td(brl(item.price), 'right')}
+      ${td(brl(calcItemSub(item)), 'right', true)}</tr>`;
+  }).join('');
+
+  // ── Condições ──
+  const condRows = [];
+  const pay = getVal('qPayment'), dead = getVal('qDeadline'), notes = getVal('qNotes');
+  if (pay)   condRows.push(`<b>Condições de Pagamento:</b> ${esc(pay)}`);
+  if (dead)  condRows.push(`<b>Prazo médio de Execução:</b> ${esc(dead)}`);
+  if (notes) condRows.push(`<b>Observações complementares:</b> ${esc(notes)}`);
+
+  document.getElementById('pdfDoc').innerHTML = `
+<div style="font-family:Arial,Helvetica,sans-serif;font-size:10pt;color:#111;line-height:1.5;padding:2px;">
+
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;border:2px solid ${color};border-radius:8px;padding:13px 15px;margin-bottom:9px;gap:12px;">
+    <div style="flex:1;">
+      <div style="font-size:16pt;font-weight:800;color:${color};margin-bottom:5px;">${esc(cfg.name)}</div>
+      <div style="font-size:8.5pt;color:#444;line-height:1.85;">${compLines.join('<br>')}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:7px;flex-shrink:0;">
+      <img src="./logo.png" onerror="this.style.display='none'" style="width:60px;height:60px;object-fit:contain;" alt="">
+      <div style="text-align:right;border:1.5px solid ${color};border-radius:6px;padding:7px 11px;">
+        <div style="font-size:12pt;font-weight:800;color:${color};">ORÇAMENTO</div>
+        <div style="font-size:8.5pt;color:#444;line-height:1.85;">Nº ${esc(qNum)}<br>Data: ${qDate}<br>Válido até: ${qVal}</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;margin-bottom:9px;font-size:9pt;line-height:1.85;">
+    <div><b>Cliente:</b> ${esc(cName)}</div>
+    ${(cPhone||cDoc) ? `<div>${cPhone?`<b>Telefone:</b> ${esc(cPhone)}`:''}${cPhone&&cDoc?'&nbsp;&nbsp;&nbsp;':''}${cDoc?`<b>CPF/CNPJ:</b> ${esc(cDoc)}`:''}</div>` : ''}
+    ${clientAddr ? `<div><b>Endereço:</b> ${esc(clientAddr)}</div>` : ''}
+  </div>
+
+  <div style="border:1px solid #e5e7eb;border-radius:6px;margin-bottom:9px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:9pt;">
+      <thead><tr style="background:${color};color:#fff;">
+        <th style="padding:6px 8px;text-align:left;width:44%;">Descrição</th>
+        <th style="padding:6px 8px;text-align:center;width:11%;">Unid.</th>
+        <th style="padding:6px 8px;text-align:center;width:11%;">Qtd</th>
+        <th style="padding:6px 8px;text-align:right;width:17%;">Preço Unit.</th>
+        <th style="padding:6px 8px;text-align:right;width:17%;">Subtotal</th>
+      </tr></thead>
+      <tbody>${itemRows}</tbody>
+    </table>
+  </div>
+
+  <div style="background:${color};color:#fff;border-radius:6px;padding:9px 14px;margin-bottom:9px;font-size:10pt;">
+    <div style="display:flex;justify-content:space-between;padding:2px 0;"><span>Subtotal</span><span>${brl(subtotal)}</span></div>
+    ${disc>0?`<div style="display:flex;justify-content:space-between;padding:2px 0;"><span>Desconto</span><span>− ${brl(disc)}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.35);margin-top:6px;padding-top:7px;font-size:13pt;font-weight:800;"><span>TOTAL</span><span>${brl(total)}</span></div>
+  </div>
+
+  ${condRows.length?`
+  <div style="border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;margin-bottom:9px;font-size:9pt;line-height:1.85;">
+    ${condRows.join('<br>')}
+  </div>`:''}
+
+  <div style="border-top:1px solid #e5e7eb;padding-top:9px;text-align:center;font-size:8pt;color:#888;line-height:1.8;">
+    <div>Este orçamento é válido até <b>${qVal}</b> e não tem valor fiscal.</div>
+    <div>${esc(cfg.name)}${cfg.phone?' · Tel: '+esc(cfg.phone):''}${cfg.email?' · '+esc(cfg.email):''}</div>
+  </div>
+
+</div>`;
 }
 
 function buildPrintHeader() {
@@ -1190,37 +1304,16 @@ function buildPrintHeader() {
 
 function buildPrintContent() {
   // ── Cliente ──
-  const name      = getVal('cName');
-  const phone     = getVal('cPhone');
-  const doc       = getVal('cDoc');
-  const addr      = getVal('cAddr');
-  const addrNum   = getVal('cAddrNum');
-  const addrComp  = getVal('cAddrComp');
-  const addrNeigh = getVal('cAddrNeigh');
-  const city      = getVal('cCity');
-  const state     = getVal('cState');
-  const cep       = getVal('cCep');
+  const name     = getVal('cName');
+  const phone    = getVal('cPhone');
+  const doc      = getVal('cDoc');
+  const addrLine = buildClientAddr();
 
-  // Build full address on one line
-  let addrParts = [];
-  if (addr)     addrParts.push(addr);
-  if (addrNum)  addrParts.push(addrNum);
-  if (addrComp) addrParts.push(addrComp);
-  let addrLine = addrParts.join(', ');
-  if (addrNeigh)        addrLine += ` - ${addrNeigh}`;
-  if (city && state)    addrLine += ` - ${city} - ${state}`;
-  else if (city)        addrLine += ` - ${city}`;
-  else if (state)       addrLine += ` - ${state}`;
-  if (cep)              addrLine += ` - CEP: ${cep}`;
-
-  let rows = [];
-  rows.push(`<span class="pl">Cliente:</span> <span class="pr">${esc(name)}</span>`);
-
-  let meta = [];
+  const rows = [`<span class="pl">Cliente:</span> <span class="pr">${esc(name)}</span>`];
+  const meta = [];
   if (phone) meta.push(`<span class="pl">Telefone:</span> <span class="pr">${esc(phone)}</span>`);
   if (doc)   meta.push(`<span class="pl">CPF/CNPJ:</span> <span class="pr">${esc(doc)}</span>`);
   if (meta.length) rows.push(meta.join(' &nbsp;&nbsp; '));
-
   if (addrLine) rows.push(`<span class="pl">Endereço:</span> <span class="pr">${esc(addrLine)}</span>`);
 
   document.getElementById('printClient').innerHTML = rows.join('<br>');
@@ -1421,11 +1514,6 @@ function showToast(msg) {
   t._timer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-// Hide printTable columns on screen (they're only for print)
-addEventListener('afterprint', () => {
-  document.getElementById('printTable').style.display   = 'none';
-  document.getElementById('itemsList').style.display    = '';
-});
 </script>
 </body>
 </html>
